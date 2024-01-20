@@ -1,0 +1,21 @@
+# Ignore all desktop.ini files in this directory and subdirectories
+**/desktop.ini
+
+# Ignore all that start with a dot
+**/.*
+
+# Ignore bin and obj folders
+**/bin/
+**/obj/
+
+# Ignore NuGet package files
+**/*.nupkg
+
+# Ignore Visual Studio user settings and cache files
+**/.vs/
+
+# But do not ignore this file
+!.gitignore
+!.gitattributes 
+!.vscode
+!.dockerignore
