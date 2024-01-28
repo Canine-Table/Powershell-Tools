@@ -1,102 +1,112 @@
-﻿Function  Show-Menu() {
-
+﻿Function Show-Menu() {
     [CmdletBinding()] param (
-        [Parameter()] $Choices,
-        [Parameter()][System.String] $ErrorMessage = "please try again.",
-        [Parameter()][System.String] $PromptString = "Enter a digit between"
+        [Parameter()] $Options,
+        [Parameter()][System.UInt32] $Columns = 3,
+        [Parameter()][System.UInt32] $Indent = 3,
+        [Parameter()][System.UInt32] $KeyPadding = 0,
+        [Parameter()][System.UInt32] $Padding = 0,
+        [Parameter()][System.UInt32] $PadLeft = 1,
+        [Parameter()][System.UInt32] $PadRight = 1,
+        [Parameter()][System.UInt32] $PadLeftKey = 2,
+        [Parameter()][System.UInt32] $PadRightKey = 2,
+        [Parameter()][System.String] $Separator = ":",
+        [Parameter()][System.String] $Message = 'Please Select One of the following choices.',
+        [Parameter()][System.String] $Error = 'Invalid Choice, please chooce between the listed options.',
+        [Parameter()][System.String] $Warning = 'Please only enter numbers',
+        [Parameter()][System.String] $Prompt = 'Please Enter your Choice',
+        [Parameter()][Switch] $Range
     );
 
     Begin {
-        foreach ($Private:__Object in @([System.Object[]], [System.Collections.Hashtable])) {
-            if (($Choices).GetType().Equals($__Object)) {
-                [System.Boolean] $Private:__Valid_Set = $true;
-            }
-        }
+        if (([System.String] $Private:__Collection = (${Options}).GetType().ToString()) -notin ('System.Object[]', 'System.Collections.Hashtable')) {
+            Write-Error -Message "You must supply a  'System.Object[]' or 'System.Collections.Hashtable' to the manditory Options parameter." `
+                -Exception 'System.Exception' `
+                -Category 'InvalidArgument' `
+                -ErrorId "InvalidParameter" `
+                -CategoryReason "The Options parameter must be of type System.Object[] or of type System.Collections.Hashtable." `
+                -CategoryTargetName "${Options}" `
+                -TargetObject "${Options}" `
+                -CategoryTargetType 'System.Object[],System.Collections.Hashtable' `
+                -ErrorAction 'Stop';
+        } else {
+            [System.UInt32] $Private:__Index = 0;
+            [System.UInt32] $Private:__Rows = 0;
+            [System.UInt32] $Private:__Column = 0;
+            [System.Boolean] $Private:__Exception = ${false};
+            [System.String] $Private:__Response = "";
+            [System.Object[]] $Private:__Menu = @();
+            [System.Collections.Hashtable] $Private:__Display = @{};
 
-        if ($null -eq (Get-Variable -Name __Valid_Set -ErrorAction SilentlyContinue)) {
-            Write-Error -Message "You must supply a hash map or object to the options parameter to use this function." `
-                                -Exception 'System.Exception' `
-                                -Category 'InvalidArgument' `
-                                -ErrorId "InvalidParameter" `
-                                -CategoryReason "The Choices parameter must be of type hashtable or an object." `
-                                -CategoryTargetName "$Choices" `
-                                -TargetObject $Choices `
-                                -CategoryTargetType 'System.Object[],System.Collections.Hashtable' `
-                                -ErrorAction 'Stop';
-        }
-
-        [System.Array]  $Private:__Menu = @();
-        [System.UInt32] $Private:__Index;
-        [System.Boolean] $Private:__Exception;
-        [System.Boolean] $Private:__Has_Description = $false;
-    }
-
-    Process {
-        switch ($Choices) {
-            System.Collections.Hashtable {
-                $__Has_Description = $true;
-                foreach ($Private:__Key in $Choices.Keys) {
-                    $__Menu += @{$__Key = $Choices[$__Key]};
-                }
-
-                Remove-Variable -Name __Key;
-                break;
-            } Default { 
-                foreach ($Private:__Value in $Choices) {
-                    $__Menu += @{$($__Menu.Count + 1) =  $__Value};
-                }
-
-                Remove-Variable -Name __Value;
-                break;
-            }
-        }
-    }
-
-    End { 
-        do {
-            $__Exception = $false;
-            
-            if ($null -ne (Get-Variable -Name __Response -ErrorAction SilentlyContinue)) {
-                Get-Message -Type Error -Message "'${__Response}' is not a one of the options, ${ErrorMessage}";
-            } else {
-                [System.String] $Private:__Response;
-                Write-Host;
-            }
-
-            for ($__Index = 0; $__Index -lt $Choices.Count; $__Index++) {
-                Write-Host -ForegroundColor Green -NoNewline " $($__Index + 1))  ";
-
-                if ($__Has_Description) {
-                    Write-Host -ForegroundColor White -NoNewline  " $($__Menu[$__Index].Keys[0])";
-                    Write-Host -ForegroundColor Yellow -NoNewline ": ";
-                    Write-Host -ForegroundColor Gray "$($__Menu[$__Index].Values[0])";
-                } else {
-                    Write-Host  -ForegroundColor White "$($__Menu[$__Index].Values[0]) ";
-                }
-            }
-
-            $__Response = Set-Prompt -Message "${PromptString} [1-${__Index}]";
+            Write-Host -NoNewline "`n  ";
+           Get-Message -Type Information -Message "${Message}";
             Write-Host;
 
-            if ($__Response.ToLower() -match "^(q(u(i(t)?)?)?)$") {
-                exit;
-            } elseif ($__Response.ToLower() -match "^(b(a(c(k)?)?)?)$") {
-                break 1 2> ${null};
-            }
+            do {
+                if (${null} -eq (Get-Variable -Name __Error -ErrorAction SilentlyContinue)) {
+                    [System.String] $Private:__Error = "${Error}";
 
-            try {
-                $__Response = [System.Convert]::ToUInt32("$__Response");
-            }  catch {
-                $__Exception = $true;
-            }
+                    if (${Range}) {
+                        $Prompt += "  [1 - $((${Options}).Count)]"
+                    }
 
-        } while ($__Response -lt 1 -or $__Response -gt $__Index -or $__Exception -ne $false);
+                } else {
+                    $__Exception = ${false};
+                    Get-Message -Type Error -Message "${__Error}";
+                    Write-Host;
+                }
+                
+                Switch (${__Collection}) {
+                    'System.Object[]' {
+                        $__Column = 0;
+                        for ($__Index  = 0; ${__Index} -lt (${Options}).Count; ${__Index}++) {
+                            Expand-Everything -Separator "${Separator}" -PadRightKey ${PadRightKey} -PadLeftKey ${PadLeftKey} -KeyPadding ${KeyPadding}  -Padding ${Padding} -PadLeft ${PadLeft} -PadRight ${PadRight} -IndentBackground ${false} -Indent ${Indent} -Newline ${false}  -Collection @(@{"$(${__Index} + 1))" = "$(${Options}[${__Index}])"});
 
-        if ($__Has_Description) {
-            return $__Menu[$__Response - 1].Keys[0];
-        } else {
-            return $__Menu[$__Response - 1].Values[0];
+                            if ((${__Menu}).Count -ne (${Options}).Count) {
+                                ${__Menu} += (${Options}[${__Index}]);
+                            }
+
+                            $__Column++;
+                            if ((${__Column} -eq ${Columns}) -or (${__Index} + 1) -eq (${Options}).Count) {
+                                Write-Host;
+                                $__Column = 0
+                                ${__Rows}++;
+                            }
+                        }
+                    } 'System.Collections.Hashtable' {
+                            $__Index = 0;
+                            $__Column = 0;
+                            foreach ($Private:__Key in (${Options}).Keys) {
+                                if ((${__Menu}).Count -ne (${Options}).Count) {
+                                    $__Menu += (${__Key});
+                                }
+
+                               ${__Column}++
+                                Expand-Everything -Separator "${Separator}"  -PadRightKey ${PadRightKey} -PadLeftKey ${PadLeftKey} -KeyPadding ${KeyPadding} -Padding ${Padding} -PadLeft ${PadLeft} -PadRight ${PadRight} -IndentBackground ${false} -Indent ${Indent} -Newline ${false}  -Collection @(@{"$(${__Index} + 1))" = @{"${__Key}" = "$(${Options}.${__Key})"}});
+                                if (((${__Column} -eq ${Columns}) -or (${__Index} + 1) -eq (${Options}).Count)) {
+                                        Write-Host;
+                                        $__Column = 0;
+                                        ${__Rows}++;
+                                }
+                                ${__Index}++;
+                            }
+                    }
+                }
+
+                $__Response = Set-Prompt -Message "${Prompt}";
+
+                 try {
+                    $__Rows = [System.Convert]::ToUInt32("${__Response}");
+                }  catch {
+                   Get-Message -Type Warning -Message "${Warning}";
+                    $__Exception = ${true};
+                }
+
+            } while (${__Response} -lt 1 -or (${__Index} -lt ${__Rows})  -or (${__Exception} -ne ${false}));
         }
+    }
+
+    End {
+        return "$(${__Menu}[(${__Rows} - 1)])";
     }
 }
 
@@ -109,7 +119,6 @@ Function Use-WindowsFeature() {
         }
     }
 }
-
 
 Function Set-Values() {
     param (
@@ -163,12 +172,42 @@ Function Prompt() {
 
 Function Set-Prompt() {
     [CmdletBinding()] param (
-        [Parameter()][System.String] $Message = "Please Enter a Value"
+        [Parameter()][System.String] $Message = "Please Enter a Value",
+        [Parameter()][Switch] $AsSecureString,
+        [Parameter()] $Parameters
+
+
     );
 
-    Write-Host -NoNewline "`n ${ESC}[0;97;44m ${ESC}[1;4;97;44m${Message}${ESC}[0;97;44m ${ESC}[0;0;98;48m$(Get-Emoji -Hexadecimal 1F4B2) ";
-    return Read-Host;
+    Begin {
+        if ((${PSBoundParameters}).ContainsKey('Parameters')) {
+            if (((${Parameters}).GetType().ToString()) -ne 'System.Collections.Hashtable') {
+                Write-Error -Message "You must supply a 'System.Collections.Hashtable' if you intend to use the Parameters parameter." `
+                    -Exception 'System.Exception' `
+                    -Category 'InvalidArgument' `
+                    -ErrorId "InvalidParameter" `
+                    -CategoryReason "The Parameters parameter must be of type System.Collections.Hashtable." `
+                    -CategoryTargetName "${Parameters}" `
+                    -TargetObject "${Parameters}" `
+                    -CategoryTargetType 'System.Collections.Hashtable' `
+                    -ErrorAction 'Stop';
+            }
+        }
+        [System.Boolean] $Private:__Secure = ${false};
+        if (${AsSecureString}) {
+            $__Secure = ${true};
+        }
+
+        Write-Host -NoNewline "`n ${ESC}[0;97;44m ${ESC}[1;4;97;44m${Message}${ESC}[0;97;44m ${ESC}[0;0;98;48m$(Get-Emoji -Hexadecimal 1F4B2) ";
+    }
+
+    End {
+        return Set-Splats -Noun 'Read' -Verbs @('Host') -Parameters @{'AsSecureString' = ${__Secure}};
+    }
 }
+
+
+
 
 Function Get-Message() {
     [CmdletBinding()] param (
@@ -277,7 +316,6 @@ Function Add-Modules() {
     }
 }
 
-
 Function Merge-Characters() {
     [CmdletBinding()] param (
         [Parameter(Mandatory)][System.UInt32] $Times,
@@ -312,7 +350,12 @@ Function Expand-Everything() {
         [Parameter()][System.Boolean] $Background = $false,
         [Parameter()][System.Boolean] $Foreground = $true,
         [Parameter()][System.Boolean] $Newline = $true,
-        [Parameter()][System.UInt32] $Pad = 0,
+        [Parameter()][System.UInt32] $Padding,
+        [Parameter()][System.UInt32] $KeyPadding,
+        [Parameter()][System.UInt32] $PadLeft = 0,
+        [Parameter()][System.UInt32] $PadRight = 0,
+        [Parameter()][System.UInt32] $PadLeftKey = 2,
+        [Parameter()][System.UInt32] $PadRightKey = 2,
         [Parameter()][System.String] $Separator = "=>"
     );
 
@@ -341,11 +384,11 @@ Function Expand-Everything() {
 
         Switch (($TestType).GetType().ToString()) {
             'System.Object[]' {
-                return $true;
+                return ${true};
              } 'System.Collections.Hashtable' {
-                return $true;
+                return ${true};
             } Default {
-                return $false;
+                return ${false};
             }
         }
     }
@@ -399,8 +442,22 @@ Function Expand-Everything() {
         ${__Color}++;
     }
 
-    if (${null} -eq (Get-Variable -Name __Padding -ErrorAction SilentlyContinue)) {
-        [System.String] $Local:__Padding = "{0,${Pad}}" -f "$(Merge-Characters -Times ${Pad} -Character ${PadChar})";
+    if (${null} -eq (Get-Variable -Name __PadLeft -ErrorAction SilentlyContinue)) {
+
+        if (${Padding} -gt 0) {
+            $PadLeft = ${Padding};
+            $PadRight = ${Padding};
+        }
+
+        if (${KeyPadding} -gt 0) {
+            $PadLeftKey = ${KeyPadding};
+            $PadRightKey = ${KeyPadding};
+        }
+
+        [System.String] $Local:__PadLeft = "{0,${PadLeft}}" -f "$(Merge-Characters -Times ${PadLeft} -Character ${PadChar})";
+        [System.String] $Local:__PadRight = "{0,${PadRight}}" -f "$(Merge-Characters -Times ${PadRight} -Character ${PadChar})";
+        [System.String] $Local:__PadLeftKey = "{0,${PadLeftKey}}" -f "$(Merge-Characters -Times ${PadLeftKey} -Character ${PadChar})";
+        [System.String] $Local:__PadRightKey = "{0,${PadRightKey}}" -f "$(Merge-Characters -Times ${PadRightKey} -Character ${PadChar})";
     }
 
     if (${null} -eq (Get-Variable -Name __Indentation -ErrorAction SilentlyContinue)) {
@@ -428,7 +485,7 @@ Function Expand-Everything() {
                         ${__Properties}.NoNewline = -not ${Newline};
                     }
 
-                    Write-Host @__Properties "${__Padding}$(${Collection}[${__Index}])${__Padding}";
+                    Write-Host @__Properties "${__PadLeft}$(${Collection}[${__Index}])${__PadRight}";
                 }
             }
         } 'System.Collections.Hashtable' {
@@ -437,13 +494,12 @@ Function Expand-Everything() {
                 Set-Properties -Properties $__Properties -NoNewline;
 
                     if (${__Color} -eq 1) {
-                        ${__Properties}.NoNewline = $false;
+                        ${__Properties}.NoNewline = ${false};
                     } else {
-                        ${__Properties}.NoNewline =  $true
-                        ;
+                        ${__Properties}.NoNewline =  ${true};
                     }
 
-                Write-Host  @__Properties  "${__Padding}$($__Key)${__Padding}";
+                Write-Host  @__Properties  "${__PadLeft}$($__Key)";
 
                 if (${true} -eq (Test-CollectionType  -TestType ${Collection}[${__Key}])) {
                     if (${Newline}) {
@@ -453,9 +509,9 @@ Function Expand-Everything() {
                     Expand-Everything -Newline ${Newline} -IndentForeground ${IndentForeground} -IndentBackground ${IndentBackground}  -IndentChar ${IndentChar} -Foreground ${Foreground} -Background ${Background} -Separator ${Separator} -Indent ${Indent} -Collection ${Collection}[${__Key}];
                 } else {
                     Set-Properties -Properties ${__Properties}  -Counter 1 -NoNewline;
-                    Write-Host @__Properties "  ${Separator}  ";
+                    Write-Host @__Properties "${__PadLeftKey}${Separator}${__PadRightKey}";
                     Set-Properties -Properties ${__Properties}   -Counter 2;
-                    Write-Host  @__Properties "${__Padding}$(${Collection}[${__Key}])${__Padding}";
+                    Write-Host  @__Properties "$(${Collection}[${__Key}])${__PadRight}";
                 }
             }
         } Default {
@@ -469,5 +525,103 @@ Function Expand-Everything() {
                 -CategoryTargetType 'System.Object[],System.Collections.Hashtable' `
                 -ErrorAction 'Stop';
         }
+    }
+}
+
+Function Set-Splats() {
+    [CmdletBinding()] param (
+        [Parameter()] $Parameters,
+        [Parameter()] $Arguments,
+        [Parameter(Mandatory)][System.String] $Noun,
+        [Parameter()] $Verbs
+    );
+    
+    Begin {
+        if ((${Verbs}).GetType().ToString() -ne 'System.Object[]') {
+            Write-Error -Message "You must supply an  'System.Object[]' to the Verbs parameter." `
+                -Exception 'System.Exception' `
+                -Category 'InvalidArgument' `
+                -ErrorId "InvalidParameter" `
+                -CategoryReason "The Verbs parameter must be of type System.Object[]." `
+                -CategoryTargetName "${Verbs}" `
+                -TargetObject "${Verbs}" `
+                -CategoryTargetType 'System.Object[]' `
+                -ErrorAction 'Stop';
+        }
+
+        if ((${PSBoundParameters}).ContainsKey('Arguments')) {
+            if ((${Arguments}).GetType().ToString() -ne 'System.Object[]') {
+                Write-Error -Message "You must supply a 'System.Object[]' type to the Arguments parameter." `
+                    -Exception 'System.Exception' `
+                    -Category 'InvalidArgument' `
+                    -ErrorId "InvalidParameter" `
+                    -CategoryReason "The Arguments parameter must be of type System.Object[]." `
+                    -CategoryTargetName "${Arguments}" `
+                    -TargetObject "${Arguments}" `
+                    -CategoryTargetType 'System.Object[]' `
+                    -ErrorAction 'Stop';
+            }
+        }
+
+        if ((${PSBoundParameters}).ContainsKey('Parameters')) {
+            if (((${Parameters}).GetType().ToString()) -ne 'System.Collections.Hashtable') {
+                Write-Error -Message "You must supply a 'System.Collections.Hashtable' if you intend to use the Parameters parameter." `
+                    -Exception 'System.Exception' `
+                    -Category 'InvalidArgument' `
+                    -ErrorId "InvalidParameter" `
+                    -CategoryReason "The Parameters parameter must be of type System.Collections.Hashtable." `
+                    -CategoryTargetName "${Parameters}" `
+                    -TargetObject "${Parameters}" `
+                    -CategoryTargetType 'System.Collections.Hashtable' `
+                    -ErrorAction 'Stop';
+            }
+        }
+
+        [System.Object[]] $Private:__Commands = @();
+        [System.String] $Private:__Command = "";
+        [System.Boolean] $Private:__Added = $false;
+    }
+    
+     Process {
+        foreach ($Private:__Verb in ${Verbs}) {
+            $__Added = ${false};
+
+            foreach ($Private:__Property in  (${__Command} = Get-Command -Name "${Noun}-${__Verb}" -ErrorAction SilentlyContinue).Parameters.Keys) {
+                if (-not ${__Added}) {
+                    $__Commands += @{"${__Command}" = @{}};
+                    $__Added = ${true};
+
+                    if (${null} -eq (Get-Variable -Name __Index -ErrorAction SilentlyContinue)) {
+                        [System.UInt32] $Private:__Index = 0;
+                    } else {
+                        ${__Index}++;
+                    }
+                }
+
+                if ((${PSBoundParameters}).ContainsKey('Parameters')) {
+                    foreach ($Private:__Passed_Property in ${Parameters}.Keys) {
+                        if (${__Passed_Property} -eq ${__Property}) {
+                            (${__Commands}[${__Index}]).${__Command}.${__Property} = $(${Parameters}.${__Passed_Property});
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    End {
+        for($__Index = 0; ${__Index} -lt ${__Commands}.Count; ${__Index}++) {
+            foreach ($Private:__Item in  ${__Commands}[${__Index}].Keys) {
+                try {
+                    [System.Collections.Hashtable] $Private:__Parameters = ${__Commands}[${__Index}].${__Item};
+                     . ${__Item} @__Parameters @Arguments;
+                } catch {
+                    . ${__Item} @__Parameters;
+                }
+            }
+        }
+        return ${null};
     }
 }
