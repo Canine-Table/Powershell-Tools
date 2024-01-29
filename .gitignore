@@ -22,4 +22,4 @@
 
 # Ignore Testing and Lab Files
 **/testing.ps1
-**/lab*.ps1
+#**/lab*.ps1
